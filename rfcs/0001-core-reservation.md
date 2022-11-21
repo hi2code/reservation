@@ -26,6 +26,14 @@ enum ReservationStatus {
     CONFIRMED = 2;
     BLOCKED = 3;
 }
+
+enum ReservationUpdateType {
+    UNKNOWN = 0;
+    CREATE = 1;
+    UPDATE = 2;
+    DELETE = 3;
+}
+
 message Reservation {
     string id = 1;
     string user_id = 2;
@@ -84,7 +92,6 @@ message GetResponse {
 
 message QueryRequest {
     string id = 1;
-
 }
 
 message QueryResponse {
@@ -92,6 +99,10 @@ message QueryResponse {
     repeated Reservation data;
 }
 
+message ListenRequest {}
+message ListenResponse {
+
+}
 service ReservationService {
     rpc reserve(ReserveRequest) returns (ReserveResponse);
     rpc update(UpdateRequest) returns (UpdateRequest);
@@ -99,8 +110,8 @@ service ReservationService {
     rpc cancel(CancelRequest) returns (CancelResponse);
     rpc get(GetRequest) returns (GetResponse);
     rpc query(QueryRequest) returns (QueryResponse);
-
-    rpc listen() returns
+    // another system can monitor newly added/confirmed/cancelled reservation
+    rpc listen(ListenRequest) returns (ListenResponse);
 }
 ```
 
@@ -127,25 +138,40 @@ CREATE TABLE reservation (
     CONSTRAINT reservation_conflict EXCLUDE USING gist (resource_id WITH = ,timespan WITH &&)
 );
 
-CREATE TABLE reservation (
+CREATE TABLE reservation_update (
     id SERIAL NOT NULL,
     reservation_id uuid NOT NULL,
     op rsvp.reservation_update_type NOT NULL
 )
-CREATE OR REPLACE FUNCTION rsvp.reservation_trigger() RETURNS TRIGGER AS
+CREATE OR REPLACE FUNCTION rsvp.query(user_id text,resource_id text,during ) RETURNS TABLE AS
 $$
 BEGIN
+
 END
 $$
 
-CREATE TRIGGER reservation_trigger AFTER INSERT OR UPDATE OR DELETE ON rsvp.reservation FOR
+CREATE OR REPLACE FUNCTION rsvp.reservation_trigger() RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO rsvp.reservation_change (reservation_id,op) VALUES (NEW.id,'create');
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF OLD.status <> NEW.status THEN
+            INSERT INTO rsvp.reservation_change (reservation_id,op) VALUES (NEW.id,'update');
+    ELSIF TG_OP = 'DELETE' THEN
+            INSERT INTO rsvp.reservation_change (reservation_id,op) VALUES (NEW.id,'delete');
+    END IF;
+    NOTIFY reservation_update;
+    RETURNS NULL;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER reservation_trigger AFTER INSERT OR UPDATE OR DELETE ON rsvp.reservation FOR EACH  ROW EXCLUDE PROCEDURE  rsvp.reservation_trigger();
 ```
 
 ## Reference-level explanation
 
 ## Drawbacks
 
-Why should we *not* do this?
+N/A
 
 ## Rationale and alternatives
 
