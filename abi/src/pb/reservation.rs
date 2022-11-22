@@ -37,6 +37,7 @@ pub struct UpdateResponse {
     #[prost(message, optional, tag = "1")]
     pub reservation: ::core::option::Option<Reservation>,
 }
+/// To change a reservation from pending to confirmed, send a ConfirmRequest.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConfirmRequest {
     #[prost(string, tag = "1")]
@@ -61,14 +62,6 @@ pub struct CancelResponse {
 pub struct GetRequest {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
-    #[prost(enumeration = "ReservationStatus", tag = "2")]
-    pub status: i32,
-    #[prost(string, tag = "3")]
-    pub resource_id: ::prost::alloc::string::String,
-    #[prost(uint64, tag = "4")]
-    pub page: u64,
-    #[prost(uint64, tag = "5")]
-    pub size: u64,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetResponse {
@@ -77,8 +70,24 @@ pub struct GetResponse {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryRequest {
-    #[prost(string, tag = "1")]
-    pub id: ::prost::alloc::string::String,
+    /// if UNKNOWN, return all reservations.
+    #[prost(enumeration = "ReservationStatus", tag = "1")]
+    pub status: i32,
+    /// resource id
+    #[prost(string, tag = "2")]
+    pub resource_id: ::prost::alloc::string::String,
+    /// pagination page
+    #[prost(uint64, tag = "3")]
+    pub page: u64,
+    /// pagination size
+    #[prost(uint64, tag = "4")]
+    pub size: u64,
+    /// start time, if 0, use Infinity for start time
+    #[prost(message, optional, tag = "5")]
+    pub start: ::core::option::Option<::prost_types::Timestamp>,
+    /// end time, if 0, use Infinity for end time
+    #[prost(message, optional, tag = "6")]
+    pub end: ::core::option::Option<::prost_types::Timestamp>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryResponse {
@@ -89,10 +98,13 @@ pub struct QueryResponse {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListenRequest {}
+/// Server will send ListenResponse to client in streaming response
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListenResponse {
+    /// update type
     #[prost(enumeration = "ReservationUpdateType", tag = "1")]
     pub op: i32,
+    /// reservation id for updated
     #[prost(message, optional, tag = "2")]
     pub reservation: ::core::option::Option<Reservation>,
 }
@@ -118,6 +130,7 @@ impl ReservationStatus {
         }
     }
 }
+/// update type
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum ReservationUpdateType {
@@ -208,6 +221,7 @@ pub mod reservation_service_client {
             self.inner = self.inner.accept_compressed(encoding);
             self
         }
+        /// make a reservation
         pub async fn reserve(
             &mut self,
             request: impl tonic::IntoRequest<super::ReserveRequest>,
@@ -223,6 +237,7 @@ pub mod reservation_service_client {
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/reserve");
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// update a reservation note
         pub async fn update(
             &mut self,
             request: impl tonic::IntoRequest<super::UpdateRequest>,
@@ -238,6 +253,7 @@ pub mod reservation_service_client {
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/update");
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// confirm a pending reservation
         pub async fn confirm(
             &mut self,
             request: impl tonic::IntoRequest<super::ConfirmRequest>,
@@ -253,6 +269,7 @@ pub mod reservation_service_client {
                 http::uri::PathAndQuery::from_static("/reservation.ReservationService/confirm");
             self.inner.unary(request.into_request(), path, codec).await
         }
+        /// cancel a reservation
         pub async fn cancel(
             &mut self,
             request: impl tonic::IntoRequest<super::CancelRequest>,
@@ -322,18 +339,22 @@ pub mod reservation_service_server {
     ///Generated trait containing gRPC methods that should be implemented for use with ReservationServiceServer.
     #[async_trait]
     pub trait ReservationService: Send + Sync + 'static {
+        /// make a reservation
         async fn reserve(
             &self,
             request: tonic::Request<super::ReserveRequest>,
         ) -> Result<tonic::Response<super::ReserveResponse>, tonic::Status>;
+        /// update a reservation note
         async fn update(
             &self,
             request: tonic::Request<super::UpdateRequest>,
         ) -> Result<tonic::Response<super::UpdateRequest>, tonic::Status>;
+        /// confirm a pending reservation
         async fn confirm(
             &self,
             request: tonic::Request<super::ConfirmRequest>,
         ) -> Result<tonic::Response<super::ConfirmResponse>, tonic::Status>;
+        /// cancel a reservation
         async fn cancel(
             &self,
             request: tonic::Request<super::CancelRequest>,

@@ -10,6 +10,7 @@ enum ReservationStatus {
     RESERVATION_STATUS_BLOCKED = 3;
 }
 
+// update type
 enum ReservationUpdateType {
     RESERVATION_UPDATE_TYPE_UNKNOWN = 0;
     RESERVATION_UPDATE_TYPE_CREATE = 1;
@@ -45,6 +46,7 @@ message UpdateResponse {
     Reservation reservation = 1;
 }
 
+// To change a reservation from pending to confirmed, send a ConfirmRequest.
 message ConfirmRequest {
     string id = 1;
 }
@@ -63,10 +65,6 @@ message CancelResponse {
 
 message GetRequest {
     string id = 1;
-    ReservationStatus  status = 2;
-    string resource_id = 3;
-    uint64 page = 4;
-    uint64 size = 5;
 }
 
 message GetResponse {
@@ -74,7 +72,18 @@ message GetResponse {
 }
 
 message QueryRequest {
-    string id = 1;
+    // if UNKNOWN, return all reservations.
+    ReservationStatus  status = 1;
+    // resource id
+    string resource_id = 2;
+    // pagination page
+    uint64 page = 3;
+    // pagination size
+    uint64 size = 4;
+    // start time, if 0, use Infinity for start time
+    google.protobuf.Timestamp start = 5;
+    // end time, if 0, use Infinity for end time
+    google.protobuf.Timestamp end = 6;
 }
 
 message QueryResponse {
@@ -83,14 +92,23 @@ message QueryResponse {
 }
 
 message ListenRequest {}
+
+// Server will send ListenResponse to client in streaming response
 message ListenResponse {
+    // update type
     ReservationUpdateType op = 1;
+    // reservation id for updated
     Reservation reservation = 2;
 }
+
 service ReservationService {
+    // make a reservation
     rpc reserve(ReserveRequest) returns (ReserveResponse);
+    // update a reservation note
     rpc update(UpdateRequest) returns (UpdateRequest);
+    // confirm a pending reservation
     rpc confirm(ConfirmRequest) returns (ConfirmResponse);
+    // cancel a reservation
     rpc cancel(CancelRequest) returns (CancelResponse);
     rpc get(GetRequest) returns (GetResponse);
     rpc query(QueryRequest) returns (QueryResponse);
