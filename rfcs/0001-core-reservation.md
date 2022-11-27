@@ -125,7 +125,7 @@ CREATE TYPE rsvp.reservation_status as ENUM('unknown','pending','confirmed','blo
 CREATE TYPE rsvp.reservation_update_type as ENUM('unknown','create','update','delete');
 
 CREATE TABLE reservation (
-    id uuid PRIMARY EKY,
+    id uuid PRIMARY KEY,
     --  user_id maybe is int or string, we use string.
     user_id varchar(64) NOT NULL,
     status rsvp.reservation_status NOT NULL DEFAULT 'pending',

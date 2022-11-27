@@ -112,7 +112,7 @@ pub struct ListenResponse {
 #[repr(i32)]
 pub enum ReservationStatus {
     Unknown = 0,
-    PreservationStatusEnding = 1,
+    Ending = 1,
     Confirmed = 2,
     Blocked = 3,
 }
@@ -124,7 +124,7 @@ impl ReservationStatus {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             ReservationStatus::Unknown => "RESERVATION_STATUS_UNKNOWN",
-            ReservationStatus::PreservationStatusEnding => "PRESERVATION_STATUS_ENDING",
+            ReservationStatus::Ending => "RESERVATION_STATUS_ENDING",
             ReservationStatus::Confirmed => "RESERVATION_STATUS_CONFIRMED",
             ReservationStatus::Blocked => "RESERVATION_STATUS_BLOCKED",
         }
