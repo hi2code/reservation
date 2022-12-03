@@ -69,7 +69,7 @@ pub struct GetResponse {
     pub reservation: ::core::option::Option<Reservation>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct QueryRequest {
+pub struct QueryReservation {
     /// if UNKNOWN, return all reservations.
     #[prost(enumeration = "ReservationStatus", tag = "1")]
     pub status: i32,
@@ -90,6 +90,11 @@ pub struct QueryRequest {
     pub end: ::core::option::Option<::prost_types::Timestamp>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct QueryRequest {
+    #[prost(message, optional, tag = "1")]
+    pub query: ::core::option::Option<QueryReservation>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryResponse {
     #[prost(uint64, tag = "1")]
     pub total: u64,
@@ -108,11 +113,13 @@ pub struct ListenResponse {
     #[prost(message, optional, tag = "2")]
     pub reservation: ::core::option::Option<Reservation>,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[derive(
+    sqlx::Type, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration,
+)]
 #[repr(i32)]
 pub enum ReservationStatus {
     Unknown = 0,
-    Ending = 1,
+    Pending = 1,
     Confirmed = 2,
     Blocked = 3,
 }
@@ -124,7 +131,7 @@ impl ReservationStatus {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             ReservationStatus::Unknown => "RESERVATION_STATUS_UNKNOWN",
-            ReservationStatus::Ending => "RESERVATION_STATUS_ENDING",
+            ReservationStatus::Pending => "RESERVATION_STATUS_PENDING",
             ReservationStatus::Confirmed => "RESERVATION_STATUS_CONFIRMED",
             ReservationStatus::Blocked => "RESERVATION_STATUS_BLOCKED",
         }
@@ -336,7 +343,7 @@ pub mod reservation_service_client {
 pub mod reservation_service_server {
     #![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     use tonic::codegen::*;
-    ///Generated trait containing gRPC methods that should be implemented for use with ReservationServiceServer.
+    /// Generated trait containing gRPC methods that should be implemented for use with ReservationServiceServer.
     #[async_trait]
     pub trait ReservationService: Send + Sync + 'static {
         /// make a reservation

@@ -5,7 +5,7 @@ import "google/protobuf/timestamp.proto";
 
 enum ReservationStatus {
     RESERVATION_STATUS_UNKNOWN = 0;
-    RESERVATION_STATUS_ENDING = 1;
+    RESERVATION_STATUS_PENDING = 1;
     RESERVATION_STATUS_CONFIRMED = 2;
     RESERVATION_STATUS_BLOCKED = 3;
 }
@@ -70,8 +70,7 @@ message GetRequest {
 message GetResponse {
     Reservation reservation = 1;
 }
-
-message QueryRequest {
+message QueryReservation {
     // if UNKNOWN, return all reservations.
     ReservationStatus  status = 1;
     // resource id
@@ -84,6 +83,9 @@ message QueryRequest {
     google.protobuf.Timestamp start = 5;
     // end time, if 0, use Infinity for end time
     google.protobuf.Timestamp end = 6;
+}
+message QueryRequest {
+    QueryReservation query = 1;
 }
 
 message QueryResponse {

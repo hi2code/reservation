@@ -4,5 +4,11 @@
             "language": "markdown",
             "scheme": "file"
         }
+    ],
+    "cSpell.words": [
+        "chrono",
+        "prost",
+        "sqlx",
+        "thiserror"
     ]
 }
