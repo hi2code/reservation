@@ -25,7 +25,7 @@ jobs:
       - name: install nextest
         uses: taiki-e/install-action@nextest
       - name: Install protoc
-        uses: apt-get install protobuf-compiler
+        run: apt-get install protobuf-compiler
       - uses: Swatinem/rust-cache@v1
       - name: Check code format
         run: cargo fmt -- --check
