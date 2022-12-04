@@ -1,6 +1,10 @@
 use crate::{ReservationError, ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
-use sqlx::{postgres::types::PgRange, types::chrono::DateTime, Row};
+use sqlx::{
+    postgres::types::PgRange,
+    types::{chrono::DateTime, Uuid},
+    PgPool, Row,
+};
 
 #[async_trait]
 impl Rsvp for ReservationManager {
@@ -12,30 +16,30 @@ impl Rsvp for ReservationManager {
         if rsvp.start.is_none() || rsvp.end.is_none() {
             return Err(ReservationError::InvalidTime);
         }
-        let start_time = abi::convert_to_utc_time(rsvp.start.as_ref().unwrap().clone());
-        let end_time = abi::convert_to_utc_time(rsvp.end.as_ref().unwrap().clone());
+        let start_time = abi::convert_to_utc_time(rsvp.start.as_ref().unwrap().clone())?;
+        let end_time = abi::convert_to_utc_time(rsvp.end.as_ref().unwrap().clone())?;
         if start_time >= end_time {
             return Err(ReservationError::InvalidTime);
         }
         let timespan: PgRange<DateTime<_>> = (start_time..end_time).into();
 
-        // use #[derive(sqlx::Type)] replace
-        // let status = abi::ReservationStatus::from_i32(rsvp.status)
-        //     .unwrap_or(abi::ReservationStatus::Pending);
+        let status = abi::ReservationStatus::from_i32(rsvp.status)
+            .unwrap_or(abi::ReservationStatus::Pending);
 
-        let id = sqlx::query(
-            "INSERT INTO reservation (user_id, status, resource_id, timespan, note)
-        VALUES ($1,$2,$3,$4,$5)",
+        let id: Uuid = sqlx::query(
+            "INSERT INTO rsvp.reservation (user_id, status, resource_id, timespan, note)
+        VALUES ($1,$2::rsvp.reservation_status,$3,$4,$5) RETURNING id",
         )
         .bind(rsvp.user_id.clone())
-        .bind(rsvp.status)
+        .bind(status.to_string())
         .bind(rsvp.resource_id.clone())
         .bind(timespan)
         .bind(rsvp.note.clone())
+        // if use execute return the number of affected rows,we use `RETURNING id` return id of insert row
         .fetch_one(&self.pool)
         .await?
         .get(0);
-        rsvp.id = id;
+        rsvp.id = id.to_string();
         Ok(rsvp)
     }
 
@@ -69,4 +73,36 @@ impl Rsvp for ReservationManager {
     ) -> Result<Vec<abi::Reservation>, ReservationError> {
         todo!()
     }
+}
+
+impl ReservationManager {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    async fn reserve_should_work_for_valid_windows() {
+        let manager = ReservationManager::new(migrated_pool);
+        // String that come from user client is with timezone, our system use utc;
+        let rsvp = abi::Reservation::new_pending(
+            "",
+            "user_id",
+            "r_id",
+            "2022-01-01T15:00:00-0700".parse().unwrap(),
+            "2022-01-04T10:00:00-0700".parse().unwrap(),
+            "note",
+        );
+        let id = manager.reserve(rsvp).await.unwrap().id;
+        assert!(!id.is_empty());
+    }
+
+    // #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
+    // async fn reserve_should_not_work_if_id_is_empty() {
+    //     todo!()
+    // }
 }
