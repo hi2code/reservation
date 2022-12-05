@@ -1,10 +1,6 @@
 use crate::{ReservationError, ReservationId, ReservationManager, Rsvp};
 use async_trait::async_trait;
-use sqlx::{
-    postgres::types::PgRange,
-    types::{chrono::DateTime, Uuid},
-    PgPool, Row,
-};
+use sqlx::{types::Uuid, PgPool, Row};
 
 #[async_trait]
 impl Rsvp for ReservationManager {
@@ -13,15 +9,7 @@ impl Rsvp for ReservationManager {
         &self,
         mut rsvp: abi::Reservation,
     ) -> Result<abi::Reservation, ReservationError> {
-        if rsvp.start.is_none() || rsvp.end.is_none() {
-            return Err(ReservationError::InvalidTime);
-        }
-        let start_time = abi::convert_to_utc_time(rsvp.start.as_ref().unwrap().clone())?;
-        let end_time = abi::convert_to_utc_time(rsvp.end.as_ref().unwrap().clone())?;
-        if start_time >= end_time {
-            return Err(ReservationError::InvalidTime);
-        }
-        let timespan: PgRange<DateTime<_>> = (start_time..end_time).into();
+        rsvp.validate()?;
 
         let status = abi::ReservationStatus::from_i32(rsvp.status)
             .unwrap_or(abi::ReservationStatus::Pending);
@@ -33,7 +21,7 @@ impl Rsvp for ReservationManager {
         .bind(rsvp.user_id.clone())
         .bind(status.to_string())
         .bind(rsvp.resource_id.clone())
-        .bind(timespan)
+        .bind(rsvp.get_timespan()?)
         .bind(rsvp.note.clone())
         // if use execute return the number of affected rows,we use `RETURNING id` return id of insert row
         .fetch_one(&self.pool)
@@ -100,9 +88,4 @@ mod test {
         let id = manager.reserve(rsvp).await.unwrap().id;
         assert!(!id.is_empty());
     }
-
-    // #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
-    // async fn reserve_should_not_work_if_id_is_empty() {
-    //     todo!()
-    // }
 }
