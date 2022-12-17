@@ -88,4 +88,28 @@ mod test {
         let id = manager.reserve(rsvp).await.unwrap().id;
         assert!(!id.is_empty());
     }
+
+    #[sqlx_database_tester::test(pool(variable = "pool", migrations = "../migrations"))]
+    async fn reserve_conflict_should_reject() {
+        let manager = ReservationManager::new(pool);
+        let rsvp1 = abi::Reservation::new_pending(
+            "",
+            "alice_id",
+            "room1",
+            "2022-01-01T10:00:00-0700".parse().unwrap(),
+            "2022-01-10T10:00:00-0700".parse().unwrap(),
+            "note",
+        );
+        let rsvp2 = abi::Reservation::new_pending(
+            "",
+            "bob_id",
+            "room1",
+            "2022-01-01T00:00:00-0700".parse().unwrap(),
+            "2022-01-05T00:00:00-0700".parse().unwrap(),
+            "note",
+        );
+        manager.reserve(rsvp1).await.unwrap();
+        let err = manager.reserve(rsvp2).await.unwrap_err();
+        assert_eq!(err,ReservationError::ReservationConflict("Key (resource_id, timespan)=(room1, [\"2022-01-01 07:00:00+00\",\"2022-01-05 07:00:00+00\")) conflicts with existing key (resource_id, timespan)=(room1, [\"2022-01-01 17:00:00+00\",\"2022-01-10 17:00:00+00\")).".to_string()))
+    }
 }
