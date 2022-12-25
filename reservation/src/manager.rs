@@ -72,6 +72,7 @@ impl ReservationManager {
 #[cfg(test)]
 mod test {
     use super::*;
+    use abi::ReservationConflictInfo;
 
     #[sqlx_database_tester::test(pool(variable = "migrated_pool", migrations = "../migrations"))]
     async fn reserve_should_work_for_valid_windows() {
@@ -110,6 +111,12 @@ mod test {
         );
         manager.reserve(rsvp1).await.unwrap();
         let err = manager.reserve(rsvp2).await.unwrap_err();
-        assert_eq!(err,ReservationError::ReservationConflict("Key (resource_id, timespan)=(room1, [\"2022-01-01 07:00:00+00\",\"2022-01-05 07:00:00+00\")) conflicts with existing key (resource_id, timespan)=(room1, [\"2022-01-01 17:00:00+00\",\"2022-01-10 17:00:00+00\")).".to_string()))
+        if let ReservationError::ReservationConflict(ReservationConflictInfo::Parsed(info)) = err {
+            assert_eq!(info.old.rid, "room1");
+            assert_eq!(info.old.start.to_rfc3339(), "2022-01-01T17:00:00+00:00");
+            assert_eq!(info.old.end.to_rfc3339(), "2022-01-10T17:00:00+00:00")
+        } else {
+            panic!("解析错误");
+        }
     }
 }

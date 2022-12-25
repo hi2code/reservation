@@ -1,13 +1,14 @@
+mod conflict;
+pub use conflict::{ReservationConflictInfo, ReservationWindow};
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
-
 #[derive(Error, Debug)]
 pub enum ReservationError {
     #[error("db error")]
     DbError(sqlx::Error),
 
-    #[error("reservation conflict {0}")]
-    ReservationConflict(String),
+    #[error("reservation conflict")]
+    ReservationConflict(ReservationConflictInfo),
 
     #[error("time is invalid")]
     InvalidTime,
